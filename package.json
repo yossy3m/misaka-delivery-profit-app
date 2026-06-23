@@ -1,0 +1,12 @@
+{
+  "name": "misaka-delivery-profit-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Google Maps Platformを利用した配送利益計算アプリ",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}
