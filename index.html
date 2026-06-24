@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Google Maps Platformを利用した配送利益計算アプリ">
+  <title>配送利益計算アプリ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <p class="eyebrow">MISAKA TRANSPORT</p>
+      <h1>配送利益計算</h1>
+      <p class="lead">ルートの距離と経費から、配送ごとの利益をすばやく確認できます。</p>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="card" aria-labelledby="route-title">
+      <div class="section-heading">
+        <span class="step">1</span>
+        <div>
+          <h2 id="route-title">配送ルート</h2>
+          <p>日本国内の住所、施設名、郵便番号などを入力してください。</p>
+        </div>
+      </div>
+
+      <div class="route-grid">
+        <label class="field">
+          <span>出発地 <b>必須</b></span>
+          <input id="origin" type="text" autocomplete="street-address"
+                 placeholder="例：東京都千代田区丸の内1丁目" required>
+        </label>
+
+        <label class="field">
+          <span>集荷地 <b class="optional">任意</b></span>
+          <input id="pickup" type="text" autocomplete="street-address"
+                 placeholder="例：東京都品川区八潮3丁目">
+        </label>
+
+        <label class="field">
+          <span>配送先 <b>必須</b></span>
+          <input id="destination" type="text" autocomplete="street-address"
+                 placeholder="例：神奈川県横浜市西区みなとみらい" required>
+        </label>
+      </div>
+
+      <label class="round-trip-option">
+        <input id="roundTrip" type="checkbox">
+        <span>
+          <strong>往復で計算する</strong>
+          <small>往復：配送先から出発地へ戻る（帰り道は集荷地を通りません）</small>
+        </span>
+      </label>
+
+      <button id="fetchRoute" class="primary-button" type="button">
+        <span class="button-label">距離・時間・高速料金を取得</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+
+      <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="cost-title">
+      <div class="section-heading">
+        <span class="step">2</span>
+        <div>
+          <h2 id="cost-title">売上・経費</h2>
+          <p>ルート取得後も、数値は手動で修正できます。</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>車両選択</span>
+          <select id="vehicle">
+            <option value="">車両を選択してください</option>
+          </select>
+        </label>
+
+        <div class="field output-field">
+          <span>車種</span>
+          <output id="vehicleType">未選択</output>
+        </div>
+
+        <label class="field">
+          <span>燃費（km/L）</span>
+          <input id="fuelEfficiency" type="number" min="0" step="0.1"
+                 inputmode="decimal" placeholder="車両選択後も修正できます">
+        </label>
+
+        <label class="field">
+          <span>燃料単価（円/L）</span>
+          <input id="fuelPrice" type="number" min="0" step="1"
+                 inputmode="numeric" placeholder="例：170">
+        </label>
+
+        <label class="field">
+          <span>売上（円）</span>
+          <input id="sales" type="number" min="0" step="1"
+                 inputmode="numeric" placeholder="例：30000">
+        </label>
+
+        <label class="field">
+          <span>荷積み時間（分）</span>
+          <input id="loadingMinutes" type="number" min="0" step="1"
+                 inputmode="numeric" placeholder="例：30">
+        </label>
+
+        <label class="field">
+          <span>荷下ろし時間（分）</span>
+          <input id="unloadingMinutes" type="number" min="0" step="1"
+                 inputmode="numeric" placeholder="例：30">
+        </label>
+
+        <label class="field">
+          <span>待機時間（分）</span>
+          <input id="waitingMinutes" type="number" min="0" step="1"
+                 inputmode="numeric" placeholder="例：60">
+        </label>
+
+        <label class="field">
+          <span>人件費単価（円/時間）</span>
+          <input id="laborHourlyRate" type="number" min="0" step="1"
+                 inputmode="numeric" placeholder="例：1500">
+        </label>
+
+        <label class="field">
+          <span>距離（km）</span>
+          <input id="distance" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0.0">
+        </label>
+
+        <div class="field output-field">
+          <span>所要時間</span>
+          <output id="duration">未取得</output>
+        </div>
+
+        <label class="field">
+          <span>高速料金（円）</span>
+          <input id="toll" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+        </label>
+      </div>
+    </section>
+
+    <section class="summary" aria-labelledby="result-title">
+      <div class="summary-heading">
+        <p>CALCULATION RESULT</p>
+        <h2 id="result-title">計算結果</h2>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-item">
+          <span>燃料費</span>
+          <strong id="fuelCost">0円</strong>
+          <small>距離 ÷ 燃費 × 燃料単価</small>
+        </div>
+        <div class="result-item">
+          <span>高速料金</span>
+          <strong id="tollCost">0円</strong>
+          <small>取得後も手動修正できます</small>
+        </div>
+        <div class="result-item">
+          <span>人件費</span>
+          <strong id="laborCost">0円</strong>
+          <small>拘束時間 × 人件費単価</small>
+        </div>
+        <div class="result-item">
+          <span>経費合計</span>
+          <strong id="totalCost">0円</strong>
+          <small>燃料費 ＋ 高速料金 ＋ 人件費</small>
+        </div>
+        <div class="result-item">
+          <span>拘束時間</span>
+          <strong id="restraintDuration">0分</strong>
+          <small>所要時間 ＋ 荷役・待機時間</small>
+        </div>
+        <div id="profitPanel" class="result-item profit-item">
+          <span>最終利益</span>
+          <strong id="profit">0円</strong>
+          <small>売上 − 経費合計</small>
+        </div>
+      </div>
+
+      <div class="summary-actions">
+        <button id="saveHistory" class="save-button" type="button">この計算結果を履歴に保存</button>
+        <p id="historyStatus" class="history-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="card history-section" aria-labelledby="history-title">
+      <div class="section-heading">
+        <span class="step">3</span>
+        <div>
+          <h2 id="history-title">計算履歴</h2>
+          <p>このブラウザに保存され、ページを再読み込みしても残ります。</p>
+        </div>
+      </div>
+
+      <p id="emptyHistory" class="empty-history">保存された履歴はありません。</p>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>距離・所要時間・高速料金は Google Maps Platform の情報を使用します。</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
