@@ -30,6 +30,7 @@ const elements = {
   distance: document.querySelector("#distance"),
   duration: document.querySelector("#duration"),
   toll: document.querySelector("#toll"),
+  tollHelp: document.querySelector("#tollHelp"),
   fuelEfficiency: document.querySelector("#fuelEfficiency"),
   fuelPrice: document.querySelector("#fuelPrice"),
   sales: document.querySelector("#sales"),
@@ -52,6 +53,7 @@ const elements = {
 
 const HISTORY_STORAGE_KEY = "misakaDeliveryProfitHistory";
 let routeDurationMinutes = 0;
+let tollUnavailable = false;
 
 const calculationInputs = [
   elements.distance,
@@ -125,6 +127,7 @@ function formatMinutes(totalMinutes) {
 
 function calculateProfit() {
   const distance = readNumber(elements.distance);
+  const tollInputIsEmpty = elements.toll.value.trim() === "";
   const toll = readNumber(elements.toll);
   const fuelEfficiency = readNumber(elements.fuelEfficiency);
   const fuelPrice = readNumber(elements.fuelPrice);
@@ -148,7 +151,8 @@ function calculateProfit() {
   const profit = sales - totalCost;
 
   elements.fuelCost.textContent = formatYen(fuelCost);
-  elements.tollCost.textContent = formatYen(toll);
+  elements.tollCost.textContent =
+    tollUnavailable && tollInputIsEmpty ? "未取得" : formatYen(toll);
   elements.laborCost.textContent = formatYen(laborCost);
   elements.totalCost.textContent = formatYen(totalCost);
   elements.restraintDuration.textContent = formatMinutes(restraintMinutes);
@@ -157,7 +161,7 @@ function calculateProfit() {
 
   return {
     distance,
-    toll,
+    toll: tollUnavailable && tollInputIsEmpty ? null : toll,
     fuelCost,
     laborCost,
     totalCost,
@@ -247,7 +251,7 @@ function renderHistory() {
       createHistoryDetail("往復", item.roundTrip ? "あり" : "なし"),
       createHistoryDetail("距離", `${item.distance.toLocaleString("ja-JP")} km`),
       createHistoryDetail("所要時間", item.duration || "未取得"),
-      createHistoryDetail("高速料金", formatYen(item.toll)),
+      createHistoryDetail("高速料金", item.toll === null ? "未取得" : formatYen(item.toll)),
       createHistoryDetail("燃料費", formatYen(item.fuelCost)),
       createHistoryDetail("人件費", formatYen(item.laborCost)),
       createHistoryDetail("経費合計", formatYen(item.totalCost)),
@@ -381,13 +385,19 @@ async function handleFetchRoute() {
     elements.duration.textContent = formatDuration(data.duration);
 
     if (data.tollYen === null) {
-      elements.toll.value = "0";
+      tollUnavailable = true;
+      elements.toll.value = "";
+      elements.tollHelp.textContent =
+        "高速料金は未取得です。必要に応じて金額を手入力してください。";
       showStatus(
-        "ルートを取得しました。Googleから高速料金が返されなかったため、高速料金は0円にしています。必要に応じて手入力してください。",
+        "ルートを取得しました。Googleから高速料金が返されなかったため、高速料金は未取得です。必要に応じて手入力してください。",
         "success"
       );
     } else {
+      tollUnavailable = false;
       elements.toll.value = String(Math.round(data.tollYen));
+      elements.tollHelp.textContent =
+        "Google Routes APIから取得した高速料金です。必要に応じて手動修正できます。";
       const outboundDescription = data.pickupAddress
         ? `${data.originAddress} → ${data.pickupAddress} → ${data.destinationAddress}`
         : `${data.originAddress} → ${data.destinationAddress}`;
@@ -415,6 +425,10 @@ async function handleFetchRoute() {
 elements.fetchRoute.addEventListener("click", handleFetchRoute);
 elements.vehicle.addEventListener("change", handleVehicleChange);
 elements.saveHistory.addEventListener("click", saveCurrentHistory);
+elements.toll.addEventListener("input", () => {
+  tollUnavailable = false;
+  elements.tollHelp.textContent = "手入力した高速料金を計算に使います。";
+});
 
 calculationInputs.forEach((input) => {
   input.addEventListener("input", calculateProfit);

@@ -241,11 +241,14 @@ function getTollInYen(route) {
     return null;
   }
 
-  return yenPrices.reduce((sum, price) => {
-    const units = Number(price.units ?? 0);
-    const nanos = Number(price.nanos ?? 0) / 1_000_000_000;
-    return sum + units + nanos;
+  const total = yenPrices.reduce((sum, price) => {
+    const units = Number.parseInt(price.units ?? "0", 10);
+    const nanos = Number(price.nanos ?? 0);
+    const yen = (Number.isFinite(units) ? units : 0) + (Number.isFinite(nanos) ? nanos / 1_000_000_000 : 0);
+    return sum + yen;
   }, 0);
+
+  return Number.isFinite(total) ? total : null;
 }
 
 function durationToSeconds(duration) {
